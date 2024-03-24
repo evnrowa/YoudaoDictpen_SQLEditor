@@ -32,12 +32,12 @@ class SFTP:
         return mib_value
 
     def _execute_sftp(self, local_files, remote_path):
+        # 连接SSH服务器
         if not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active():
             print("SSH connection is not active.")
             print("连接失败，请检查连接，按enter退出")
             os.system("pause")
             os._exit(1)
-            
 
         # 创建 SFTP 客户端
         sftp_client = self.ssh_client.open_sftp()
@@ -47,6 +47,12 @@ class SFTP:
             local_file_path = file_info["path"]
             remote_file_path = os.path.join(remote_path, file_info["name"])
             total_bytes = os.path.getsize(local_file_path)
+
+            # 检查远程文件是否存在，并获取已传输的大小
+            try:
+                remote_file_size = sftp_client.stat(remote_file_path).st_size
+            except FileNotFoundError:
+                remote_file_size = 0
 
             # 定义进度回调函数
             def progress_callback(bytes_transferred, file_size):
@@ -61,7 +67,10 @@ class SFTP:
 
             # 上传文件
             with open(local_file_path, 'rb') as local_file:
-                sftp_client.putfo(local_file, remote_file_path, callback=lambda x, y: progress_callback(x, total_bytes), file_size=total_bytes)
+                # 移动文件指针至已传输的位置
+                local_file.seek(remote_file_size)
+                # 从已传输位置开始上传文件，并传入进度回调函数
+                sftp_client.putfo(local_file, remote_file_path, callback=lambda x, y: progress_callback(x + remote_file_size, total_bytes), file_size=total_bytes)
 
         # 关闭连接
         sftp_client.close()
