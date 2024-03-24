@@ -105,7 +105,7 @@ def initialize():
         [sg.Text("table_name【表table_mathexercise的完整名称】："),sg.In(key='table_name_input', default_text=table_name), sg.Button("自动填充")],
         [sg.Text("video_input_path【输入视频的文件夹路径】："),sg.In(key='video_input_path_input', default_text=video_input_path), sg.FolderBrowse(button_text="选择文件夹", target='video_input_path_input')],
         [sg.Text("dictpen_video_path【词典笔存放视频的文件夹路径】："),sg.In(key='dictpen_video_path_input', default_text=dictpen_video_path),sg.Button("帮助")],
-        [sg.Button("保存并启动删除脚本"), sg.Button("保存并启动添加脚本")]
+        [sg.Button("保存并启动删除脚本"), sg.Button("保存并启动添加脚本"),sg.Button("设置开机自启ssh")]
     ]
 
 
@@ -165,6 +165,8 @@ def main():
 
             os.system('start item_add.py')
 
+        elif event == "设置开机自启ssh":
+            os.system('start ssh.py')
 
         elif event == "保存并启动删除脚本":
             table_name_to_save = values["table_name_input"]
