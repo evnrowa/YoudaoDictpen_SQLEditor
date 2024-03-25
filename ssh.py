@@ -83,15 +83,14 @@ if veryfy == str("我已知晓风险"):
     os.system("pause")
     #检查设备是否处于OK状态
     check_devices_okay()
-    rcs_pull_command = "adb pull /etc/init.d/rcS"
+    rcs_pull_command = "adb pull /etc/init.d/rcS ./rcS_"
     rcs_push_command = "adb push rcS /etc/init.d/rcS"
-    reboot_command = "adb shell reboot"
     start_command = "adb shell sshd_sevice start"
     chmod_command = "adb shell chmod +x /etc/init.d/rcS"
     pwd_command = "adb shell passwd"
     os.system(rcs_pull_command) 
 
-    filename = 'rcS'
+    filename = 'rcS_'
     search_string = '/usr/sbin/dropbear'
     
     if is_string_in_file(filename, search_string):#防止重复开启
@@ -105,20 +104,13 @@ if veryfy == str("我已知晓风险"):
             #检查设备是否处于OK状态
         check_devices_okay()
         print("请输入新的root密码")
-        os.system("adb shell passwd")
-        os.system(start_command) 
-        os.system(rcs_pull_command) 
-        with open("rcS","a") as f:
-            f.writelines('/usr/sbin/dropbear')
+        os.system("adb shell passwd") 
         os.system(rcs_push_command) 
         os.system(chmod_command) 
-        print("操作已完成，重启后生效") 
-        wait=input("是否重启y/n\n")
-        msg=str(wait)
-        if msg=="y":
-            os.system(reboot_command) 
-        else:
-            exit
+        os.system(start_command)
+        print("操作已完成") 
+        os.system("pause") 
+        exit
 else:
     print("按下enter退出")
     os.system("pause")

@@ -71,11 +71,23 @@ class SFTP:
                     print(f"\nUpload complete: {file_info['name']}")
 
             # 上传文件
-            with open(local_file_path, 'rb') as local_file:
-                # 移动文件指针至已传输的位置
-                local_file.seek(remote_file_size)
-                # 从已传输位置开始上传文件，并传入进度回调函数
-                sftp_client.putfo(local_file, remote_file_path, callback=lambda x, y: progress_callback(x + remote_file_size, total_bytes), file_size=total_bytes)
+            retries = 3  # 设置重试次数
+            for attempt in range(retries):
+                try:
+                    with open(local_file_path, 'rb') as local_file:
+                        # 移动文件指针至已传输的位置
+                        local_file.seek(remote_file_size)
+                        # 从已传输位置开始上传文件，并传入进度回调函数
+                        sftp_client.putfo(local_file, remote_file_path, callback=lambda x, y: progress_callback(x + remote_file_size, total_bytes), file_size=total_bytes)
+                    break  # 上传成功，跳出重试循环
+                except paramiko.SSHException as e:
+                    print(f"SSHException occurred during upload: {e}")
+                    if attempt < retries - 1:
+                        print("Retrying upload...")
+                        time.sleep(5)  # 等待一段时间后重试
+                    else:
+                        print("Upload failed after retries.")
+                        raise  # 上传失败，抛出异常
 
         # 关闭连接
         sftp_client.close()
@@ -85,6 +97,7 @@ class SFTP:
         # 返回上传完成信息
         return "All files uploaded."
 
+    
     def execute_sftp(self, local_files, remote_path):
         if not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active():
             print("SSH connection is not active.")
@@ -137,7 +150,7 @@ with open('config.json', 'r') as f:
 
 dictpen_password = config.get("dictpen_password","")
 copy_video_to_dictpen_state = config.get("copy_video_to_dictpen","")
-dictpen_ip_address = config.get("ip_address","")
+ip_address = config.get("ip_address","")
 remote_copy_status = config.get("remote_copy_video_to_dictpen","")
 dictpen_root = config.get("dictpen_root","")
 #####
@@ -248,7 +261,7 @@ current_time = time.localtime()
 exerciseFavorite_name = "exerciseFavorite_" + "{:02d}{:02d}{:02d}{:02d}{:02d}{:02d}".format(current_time.tm_year, current_time.tm_mon, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec) + ".db"
 #生成并执行pull命令
 if remote_copy_status == 1:
-    sftp.connect(dictpen_ip_address, "root", dictpen_root)
+    sftp.connect(ip_address, "root", dictpen_root)
     local_file_path = './' + exerciseFavorite_name  # 当前目录
     sftp.pull_file("/userdisk/math/exerciseFav/exerciseFavorite.db", local_file_path) 
     print("已成功导出exerciseFavorite.db")
@@ -326,8 +339,8 @@ for file_dict in files_list:
     knowledge_parents = '[{"knowId": 1164,"knowName": "求比值的方法","knowVideo":  "' + dictpen_video_path + name + '"}]'
     new_knowledge_data = (final_knowledgeID,final_name_show,dictpen_video_path + name,knowledge_parents,"[]","[]","1",now_timestamp)
     cursor.execute("INSERT INTO table_knowledge (code, text, video, parents, children, simQuesList, sync_state, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", new_knowledge_data)
-    conn.commit()
-    conn.close()
+conn.commit()
+conn.close()
     #拷贝视频文件
 for file_dict in files_list:
     if copy_video_to_dictpen_state == 1 and remote_copy_status == 0:
@@ -337,7 +350,7 @@ for file_dict in files_list:
     else:
         break
 if copy_video_to_dictpen_state == 1 and remote_copy_status == 1:
-    sftp.connect(dictpen_ip_address, "root", dictpen_root)
+    sftp.connect(ip_address, "root", dictpen_root)
     video_path = dictpen_video_path.replace("file://", "")
     result = sftp._execute_sftp(files_list, video_path)
     print(result)
@@ -350,7 +363,7 @@ if copy_video_to_dictpen_state == 0:
 
 
 if remote_copy_status == 1:
-    sftp.connect(dictpen_ip_address, "root", dictpen_root)
+    sftp.connect(ip_address, "root", dictpen_root)
     local_file_path = './' + exerciseFavorite_name  # 当前目录
     sftp.execute_sftp(local_file_path, "/userdisk/math/exerciseFav/exerciseFavorite.db")
     print("处理完成")

@@ -66,11 +66,23 @@ class SFTP:
                     print(f"\nUpload complete: {file_info['name']}")
 
             # 上传文件
-            with open(local_file_path, 'rb') as local_file:
-                # 移动文件指针至已传输的位置
-                local_file.seek(remote_file_size)
-                # 从已传输位置开始上传文件，并传入进度回调函数
-                sftp_client.putfo(local_file, remote_file_path, callback=lambda x, y: progress_callback(x + remote_file_size, total_bytes), file_size=total_bytes)
+            retries = 3  # 设置重试次数
+            for attempt in range(retries):
+                try:
+                    with open(local_file_path, 'rb') as local_file:
+                        # 移动文件指针至已传输的位置
+                        local_file.seek(remote_file_size)
+                        # 从已传输位置开始上传文件，并传入进度回调函数
+                        sftp_client.putfo(local_file, remote_file_path, callback=lambda x, y: progress_callback(x + remote_file_size, total_bytes), file_size=total_bytes)
+                    break  # 上传成功，跳出重试循环
+                except paramiko.SSHException as e:
+                    print(f"SSHException occurred during upload: {e}")
+                    if attempt < retries - 1:
+                        print("Retrying upload...")
+                        time.sleep(5)  # 等待一段时间后重试
+                    else:
+                        print("Upload failed after retries.")
+                        raise  # 上传失败，抛出异常
 
         # 关闭连接
         sftp_client.close()
@@ -80,6 +92,7 @@ class SFTP:
         # 返回上传完成信息
         return "All files uploaded."
 
+    
     def execute_sftp(self, local_files, remote_path):
         if not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active():
             print("SSH connection is not active.")
